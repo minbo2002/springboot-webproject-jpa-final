@@ -42,4 +42,27 @@ public class MemberJpaRepository {
     public void delete(Member member) {
         em.remove(member);
     }
+
+    public List<Member> findByUsernameAndAgeGreaterThan(String username, int age) {
+        return em.createQuery("select m from Member m where m.username = :username and m.age > :age")
+                .setParameter("username", username)
+                .setParameter("age", age)
+                .getResultList();
+    }
+
+    // 페이징 조건 1
+    public List<Member> findByPage(int age, int offset, int limit) {
+        return em.createQuery("select m from Member m where m.age = :age order by m.username desc ")
+                .setParameter("age", age)
+                .setFirstResult(offset)  // 어디 페이지부터 가져올지  ex) page=1 offset=0 limit=10  --> page=2 offset=11 limit=10
+                .setMaxResults(limit)  // 페이지당 데이터 개수
+                .getResultList();
+    }
+
+    // 페이징 조건 2
+    public long totalCount(int age) {
+        return em.createQuery("select count(m) from Member m where m.age = :age", Long.class)
+                .setParameter("age", age)
+                .getSingleResult();
+    }
 }
