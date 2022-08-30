@@ -11,9 +11,8 @@ import javax.persistence.*;
 @ToString(of = {"id", "username", "age"})           // --> AccessLevel을 protected까지 허용 (private 안됨)
 @NamedQuery(
         name="Member.findByUsername",
-        query = "select m from Member m where m.username = :username"
-)
-public class Member {
+        query = "select m from Member m where m.username = :username")
+public class Member extends BaseEntity {
 
     @Id
     @GeneratedValue

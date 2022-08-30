@@ -12,6 +12,8 @@ import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
 import study.datajpa.entity.Team;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,7 @@ class MemberRepositoryTest {
 
     @Autowired MemberRepository memberRepository;
     @Autowired TeamRepository teamRepository;
+    @PersistenceContext EntityManager em;
 
     @Test
     public void testMember() {
@@ -169,6 +172,7 @@ class MemberRepositoryTest {
         System.out.println("findOptionalMember =" + findOptionalMember);
     }
 
+    // 페이징, 정렬
     @Test
     public void paging() {
         // given
@@ -197,5 +201,59 @@ class MemberRepositoryTest {
         assertThat(page.getTotalPages()).isEqualTo(2);    // .getTotalPages() : 총페이지 개수
         assertThat(page.isFirst()).isTrue();              // .isFirst()  :  첫페이지인지 여부 확인
         assertThat(page.hasNext()).isTrue();              // .hasNext()  : 다음페이지 있는지 여부 확인
+    }
+
+    // 벌크성 수정쿼리
+    @Test
+    public void bulkUpdate() {
+        // given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 19));
+        memberRepository.save(new Member("member3", 20));
+        memberRepository.save(new Member("member4", 21));
+        memberRepository.save(new Member("member5", 40));
+
+        // when
+        int resultCount = memberRepository.bulkAgePlus(20);
+
+        // then
+        assertThat(resultCount).isEqualTo(3);
+    }
+
+    // Lazy loading N+1 문제  -->  fetch join 사용
+    // @EntityGraph 예시
+    @Test
+    public void findMemberLazy() {
+        // given
+        // member1 -> teamA 참조
+        // member2 -> teamB 참조
+
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 10, teamB);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        em.flush();  // 영속성 컨텍스트에 있는 캐시정보를 DB에 전부 반영
+        em.clear();  // 이후에 영속성 컨텍스트 다 날림.
+
+        // when
+        // .finaAll() 메서드일 경우 Member 조회 쿼리 1번 날렸는데, member 결과가 2개 나옴 (N+1문제)
+        List<Member> members = memberRepository.findEntityGraphByUsername("member1");
+
+        for(Member member : members) {
+            System.out.println("member = " + member.getUsername());  // 위에 실제조회한 member 객체값만 나옴
+            System.out.println("member.teamClass = " + member.getTeam().getClass());  // 가짜객체인 프록시 team 객체 가져옴
+            System.out.println("member.team = " + member.getTeam().getName());  // 실제 team의 이름을 가져와야하므로 그제서야 team 객체에 접근
+        }
+    }
+
+    @Test
+    public void callCustom() {
+        List<Member> result = memberRepository.findMemberCustom();
     }
 }
